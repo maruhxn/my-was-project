@@ -1,6 +1,8 @@
 package com.study.connector;
 
 import com.study.handler.HttpRequestHandler;
+import com.study.servlet.manager.ServletManager;
+import com.study.session.SessionManager;
 import com.study.util.ShutdownHook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,9 +27,13 @@ public class Connector {
     private final int DEFAULT_PORT = 8080;
     private final int DEFAULT_ACCEPT_COUNT = 100;
     private final ServerSocket serverSocket;
+    private final ServletManager servletManager;
+    private final SessionManager sessionManager;
 
-    public Connector(final int port, final int acceptCount) {
+    public Connector(final int port, final int acceptCount, ServletManager servletManager, SessionManager sessionManager) {
+        this.servletManager = servletManager;
         this.serverSocket = createServerSocket(port, acceptCount);
+        this.sessionManager = sessionManager;
     }
 
     private ServerSocket createServerSocket(int port, int acceptCount) {
@@ -69,7 +75,7 @@ public class Connector {
         try {
             while (true) {
                 Socket socket = serverSocket.accept();
-                es.submit(new HttpRequestHandler(socket));
+                es.submit(new HttpRequestHandler(socket, servletManager, sessionManager));
             }
         } catch (IOException e) {
             log.error("서버 소켓 종료: {}", e.getMessage());

@@ -35,10 +35,10 @@ public class ShutdownHook implements Runnable {
         es.shutdown();
         try {
             log.info("서비스 정상 종료 시도");
-            if (!es.awaitTermination(10, TimeUnit.SECONDS)) {
+            if (!es.awaitTermination(5, TimeUnit.SECONDS)) {
                 log.info("서비스 정상 종료 실패 -> 강제 종료 시도");
                 es.shutdownNow();
-                if (!es.awaitTermination(10, TimeUnit.SECONDS)) {
+                if (!es.awaitTermination(5, TimeUnit.SECONDS)) {
                     log.info("서비스가 종료되지 않았습니다.");
                 }
             }

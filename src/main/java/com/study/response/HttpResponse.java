@@ -9,45 +9,59 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
+import java.util.HashMap;
+import java.util.Map;
 
 public class HttpResponse {
 
     private static final Logger log = LoggerFactory.getLogger(HttpResponse.class);
-    private final HttpStatus httpStatus;
-    private final String requestURI;
-    private final String location;
-    private String responseBody;
     private final StringBuilder messageBuilder = new StringBuilder();
+    private HttpStatus status;
+    private String location;
+    private String responseBody;
     private String contentType = "text/html; charset=UTF-8";
 
-    public HttpResponse(HttpStatus httpStatus, String requestURI, String location) throws IOException {
-        this.httpStatus = httpStatus;
-        this.requestURI = requestURI;
-        this.location = location;
+    private Map<String, String> headers = new HashMap<>();
+    private Map<String, String> cookies = new HashMap<>();
+
+    public HttpResponse() {
     }
 
     public String getResponse() throws IOException {
-        this.responseBody = findResourceFromRequestURI(location);
+        if (this.responseBody != null && this.responseBody.endsWith(".html")) {
+            this.responseBody = findResourceFromLocation(responseBody);
+            headers.put("Content-Type", "text/html; charset=UTF-8");
+            headers.put("Content-Length", String.valueOf(responseBody.getBytes().length));
+        }
 
-        generateStatusLine(httpStatus);
-        generateHeaderLine(contentType, responseBody);
+        generateStatusLine();
+        generateHeaderLine(); // 헤더, 쿠키 처리
         messageBuilder.append(System.lineSeparator());
-        messageBuilder.append(responseBody);
+
+        if (responseBody != null) {
+            messageBuilder.append(responseBody);
+        }
+
         return messageBuilder.toString();
     }
 
-    private void generateHeaderLine(String contentType, String responseBody) {
-        messageBuilder.append(String.format("Content-Type: %s\r\n", contentType));
-        messageBuilder.append(String.format("Content-Length: %s\r\n", responseBody.getBytes(UTF_8).length));
+    // 헤더, 쿠키
+    private void generateHeaderLine() {
+        for (Map.Entry<String, String> header : headers.entrySet()) {
+            messageBuilder.append(String.format("%s: %s\r\n", header.getKey(), header.getValue()));
+        }
+
+        // 쿠키 추가
+        for (Map.Entry<String, String> cookie : cookies.entrySet()) {
+            messageBuilder.append(String.format("Set-Cookie: %s=%s\r\n", cookie.getKey(), cookie.getValue()));
+        }
     }
 
-    private void generateStatusLine(HttpStatus httpStatus) {
-        messageBuilder.append(String.format("HTTP/1.1 %s %s\r\n", httpStatus.getStatusCode(), httpStatus.getReason()));
+    private void generateStatusLine() {
+        messageBuilder.append(String.format("HTTP/1.1 %s %s\r\n", status.getStatusCode(), status.getReason()));
     }
 
-    private String findResourceFromRequestURI(String location) throws IOException {
+    private static String findResourceFromLocation(String location) throws IOException {
         URL resource = ClassLoader.getSystemClassLoader().getResource("static" + location);
         if (resource == null) {
             throw new FileNotFoundException("Resource not found: " + location);
@@ -55,5 +69,30 @@ public class HttpResponse {
 
         Path path = Paths.get(resource.getPath());
         return Files.readString(path);
+    }
+
+    public void setStatus(HttpStatus status) {
+        this.status = status;
+    }
+
+    public void setLocation(String location) {
+        this.location = location;
+        headers.put("Location", location);
+    }
+
+    public void setResponseBody(String responseBody) {
+        this.responseBody = responseBody;
+    }
+
+    public void setContentType(String contentType) {
+        headers.put("Content-Type", contentType);
+    }
+
+    public void setContentLength(int length) {
+        headers.put("Content-Length", String.valueOf(length));
+    }
+
+    public void addCookie(String key, String value) {
+        cookies.put(key, value);
     }
 }

@@ -13,15 +13,17 @@ import java.util.List;
 
 public class MyWasMain {
     public static void main(String[] args) {
-        List<Object> controllers = List.of();
+        UserRepository userRepository = new MemoryUserRepository();
+        List<Object> controllers = List.of(new UserController(userRepository));
         AnnotationServlet annotationServlet = new AnnotationServlet(controllers);
 
         ServletManager servletManager = new ServletManager();
         servletManager.setDefaultServlet(annotationServlet);
         servletManager.add("/favicon.ico", new DiscardServlet());
 
+        SessionManager sessionManager = new SessionManager();
 
-        Connector connector = new Connector(8080, 100, servletManager);
+        Connector connector = new Connector(8080, 100, servletManager, sessionManager);
         connector.start();
     }
 }

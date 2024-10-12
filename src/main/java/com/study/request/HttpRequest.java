@@ -1,5 +1,7 @@
 package com.study.request;
 
+import com.study.session.Session;
+import com.study.session.SessionManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,12 +17,18 @@ public class HttpRequest {
 
     private static final Logger log = LoggerFactory.getLogger(HttpRequest.class);
 
-    private String method;
-    private String requestURI;
-    private final Map<String, String> queryParameters = new HashMap<>();
-    private final Map<String, String> headers = new HashMap<>();
+    private static final String COOKIE_HEADER_NAME = "Cookie";
 
-    public HttpRequest(BufferedReader reader) throws IOException {
+    private HttpMethod method;
+    private String requestURI;
+    private final Map<String, String> parameters = new HashMap<>();
+    private final Map<String, String> headers = new HashMap<>();
+    private final Map<String, String> cookies = new HashMap<>();
+
+    private final SessionManager sessionManager;
+
+    public HttpRequest(BufferedReader reader, SessionManager sessionManager) throws IOException {
+        this.sessionManager = sessionManager;
         parseRequestLine(reader); // 먼저 시작 라인 파싱
         parseHeaders(reader); // 이후 헤더 파싱
         parseBody(reader);
@@ -35,7 +43,7 @@ public class HttpRequest {
         if (parts.length != 3) {
             throw new IOException("Invalid request line: " + requestLine);
         }
-        method = parts[0];
+        method = HttpMethod.valueOf(parts[0]);
         String[] pathParts = parts[1].split("\\?");
         requestURI = pathParts[0];
         if (pathParts.length > 1) {
@@ -49,7 +57,7 @@ public class HttpRequest {
             String key = URLDecoder.decode(keyValue[0], UTF_8);
             String value = keyValue.length > 1 ?
                     URLDecoder.decode(keyValue[1], UTF_8) : "";
-            queryParameters.put(key, value);
+            parameters.put(key, value);
         }
     }
 
@@ -57,8 +65,22 @@ public class HttpRequest {
         String line;
         while (!(line = reader.readLine()).isEmpty()) {
             String[] headerParts = line.split(":");
-            // trim() 앞 뒤에 공백 제거
             headers.put(headerParts[0].trim(), headerParts[1].trim());
+
+            // Cookie 헤더 파싱
+            if (headerParts[0].trim().equalsIgnoreCase(COOKIE_HEADER_NAME)) {
+                parseCookies(headerParts[1].trim());
+            }
+        }
+    }
+
+    private void parseCookies(String cookieHeader) {
+        String[] cookiePairs = cookieHeader.split(";");
+        for (String cookie : cookiePairs) {
+            String[] keyValue = cookie.split("=", 2); // 쿠키는 'name=value' 형태로 전달됨
+            String key = keyValue[0].trim();
+            String value = keyValue.length > 1 ? keyValue[1].trim() : ""; // value가 없는 경우 빈 문자열로 처리
+            cookies.put(key, value);
         }
     }
 
@@ -86,7 +108,7 @@ public class HttpRequest {
         }
     }
 
-    public String getMethod() {
+    public HttpMethod getMethod() {
         return method;
     }
 
@@ -94,12 +116,20 @@ public class HttpRequest {
         return requestURI;
     }
 
-    public Map<String, String> getQueryParameters() {
-        return queryParameters;
+    public Map<String, String> getParameters() {
+        return parameters;
     }
 
     public Map<String, String> getHeaders() {
         return headers;
+    }
+
+    public Map<String, String> getCookies() {
+        return cookies;
+    }
+
+    public String getCookie(String key) {
+        return cookies.get(key);
     }
 
     @Override
@@ -107,8 +137,16 @@ public class HttpRequest {
         return "HttpRequest{" +
                 "method='" + method + '\'' +
                 ", path='" + requestURI + '\'' +
-                ", queryParameters=" + queryParameters +
+                ", queryParameters=" + parameters +
                 ", headers=" + headers +
                 '}';
+    }
+
+    public Session getSession() {
+        return sessionManager.getSession(this, true);
+    }
+
+    public Session getSession(boolean creation) {
+        return sessionManager.getSession(this, creation);
     }
 }
