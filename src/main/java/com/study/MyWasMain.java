@@ -1,6 +1,7 @@
 package com.study;
 
 import com.study.app.MemoryUserRepository;
+import com.study.app.Resource;
 import com.study.app.UserController;
 import com.study.app.UserRepository;
 import com.study.connector.Connector;
@@ -13,8 +14,9 @@ import java.util.List;
 
 public class MyWasMain {
     public static void main(String[] args) {
+        Resource eTagResource = new Resource("v1", "v1");
         UserRepository userRepository = new MemoryUserRepository();
-        List<Object> controllers = List.of(new UserController(userRepository));
+        List<Object> controllers = List.of(new UserController(userRepository, eTagResource));
         AnnotationServlet annotationServlet = new AnnotationServlet(controllers);
 
         ServletManager servletManager = new ServletManager();

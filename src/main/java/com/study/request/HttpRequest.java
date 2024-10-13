@@ -166,4 +166,8 @@ public class HttpRequest {
     public Session getSession(boolean creation) {
         return sessionManager.getSession(this, creation);
     }
+
+    public String getHeaderValue(String name) {
+        return this.headers.get(name);
+    }
 }

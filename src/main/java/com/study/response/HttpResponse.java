@@ -131,4 +131,12 @@ public class HttpResponse {
     public void addCookie(HttpCookie cookie) {
         cookies.put(cookie.getName(), cookie);
     }
+
+    public void setETag(String eTag) {
+        headers.put("ETag", eTag);
+    }
+
+    public void setCacheControl(int age) {
+        headers.put("Cache-Control", String.format("max-age=%d", age));
+    }
 }

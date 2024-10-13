@@ -14,7 +14,11 @@ import com.study.session.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Map;
+import java.util.Objects;
 
 import static com.study.session.SessionConst.LOGIN_USER;
 import static com.study.session.SessionManager.SESSION_COOKIE_NAME;
@@ -25,8 +29,11 @@ public class UserController {
 
     private final UserRepository userRepository;
 
-    public UserController(UserRepository userRepository) {
+    private final Resource resource;
+
+    public UserController(UserRepository userRepository, Resource resource) {
         this.userRepository = userRepository;
+        this.resource = resource;
     }
 
     @RequestMapping("/")
@@ -37,9 +44,7 @@ public class UserController {
 
     @RequestMapping("/login")
     public void login(HttpRequest request, HttpResponse response) {
-        if (request.getMethod() != HttpMethod.GET) {
-            throw new NotImplementedException("잘못된 METHOD 입니다");
-        }
+        checkIsEnableMethod(request, HttpMethod.GET);
 
         response.setStatus(HttpStatus.OK);
         response.setResponseBody("/login.html");
@@ -47,9 +52,7 @@ public class UserController {
 
     @RequestMapping("/login-json")
     public void loginWithJson(HttpRequest request, HttpResponse response) {
-        if (request.getMethod() != HttpMethod.POST) {
-            throw new NotImplementedException("잘못된 METHOD 입니다");
-        }
+        checkIsEnableMethod(request, HttpMethod.POST);
 
         Map<String, Object> body = request.getJsonBody();
         String id = (String) body.get("id");
@@ -81,9 +84,7 @@ public class UserController {
 
     @RequestMapping("/login-action")
     public void loginAction(HttpRequest request, HttpResponse response) {
-        if (request.getMethod() != HttpMethod.POST) {
-            throw new NotImplementedException("잘못된 METHOD 입니다");
-        }
+        checkIsEnableMethod(request, HttpMethod.POST);
 
         Map<String, String> parameters = request.getParameters();
         String id = parameters.get("id");
@@ -115,9 +116,7 @@ public class UserController {
 
     @RequestMapping("/register")
     public void register(HttpRequest request, HttpResponse response) {
-        if (request.getMethod() != HttpMethod.GET) {
-            throw new NotImplementedException("잘못된 METHOD 입니다");
-        }
+        checkIsEnableMethod(request, HttpMethod.GET);
 
         response.setStatus(HttpStatus.OK);
         response.setResponseBody("/register.html");
@@ -125,9 +124,7 @@ public class UserController {
 
     @RequestMapping("/register-action")
     public void registerAction(HttpRequest request, HttpResponse response) {
-        if (request.getMethod() != HttpMethod.POST) {
-            throw new NotImplementedException("잘못된 METHOD 입니다");
-        }
+        checkIsEnableMethod(request, HttpMethod.POST);
 
         Map<String, String> parameters = request.getParameters();
         String id = parameters.get("id");
@@ -153,9 +150,7 @@ public class UserController {
 
     @RequestMapping("/register-json")
     public void registerWithJson(HttpRequest request, HttpResponse response) {
-        if (request.getMethod() != HttpMethod.POST) {
-            throw new NotImplementedException("잘못된 METHOD 입니다");
-        }
+        checkIsEnableMethod(request, HttpMethod.POST);
 
         Map<String, Object> body = request.getJsonBody();
         String id = (String) body.get("id");
@@ -181,9 +176,7 @@ public class UserController {
 
     @RequestMapping("/info")
     public void userInfo(HttpRequest request, HttpResponse response) {
-        if (request.getMethod() != HttpMethod.GET) {
-            throw new NotImplementedException("잘못된 METHOD 입니다");
-        }
+        checkIsEnableMethod(request, HttpMethod.GET);
 
         Session session = request.getSession(false);
         if (session == null) {
@@ -198,9 +191,7 @@ public class UserController {
 
     @RequestMapping("/logout")
     public void logout(HttpRequest request, HttpResponse response) {
-        if (request.getMethod() != HttpMethod.GET) {
-            throw new NotImplementedException("잘못된 METHOD 입니다");
-        }
+        checkIsEnableMethod(request, HttpMethod.GET);
 
         Session session = request.getSession(false);
 
@@ -217,5 +208,64 @@ public class UserController {
         cookie.setPath("/");
 
         response.addCookie(cookie);
+    }
+
+    @RequestMapping("/resource")
+    public void getResourceWithCache(HttpRequest request, HttpResponse response) throws NoSuchAlgorithmException {
+        checkIsEnableMethod(request, HttpMethod.GET);
+
+        String eTag = generateETag(resource);
+
+        String ifNoneMatch = request.getHeaderValue("If-None-Match");
+
+        // If-None-Match와 ETag가 일치하는지 확인
+        if (Objects.equals(ifNoneMatch, eTag)) {
+            // ETag가 일치하면 304 Not Modified 반환
+            response.setStatus(HttpStatus.NOT_MODIFIED);
+            response.setETag(eTag);
+            return;
+        }
+
+        // ETag가 일치하지 않으면 리소스와 함께 ETag를 반환
+        response.setStatus(HttpStatus.OK);
+        response.setETag(eTag);
+        response.setCacheControl(10);
+        response.setResponseBody(resource);
+    }
+
+    @RequestMapping("/update-resource")
+    public void updateResource(HttpRequest request, HttpResponse response) {
+        checkIsEnableMethod(request, HttpMethod.POST);
+
+        Map<String, Object> body = request.getJsonBody();
+        String id = (String) body.get("id");
+        String content = (String) body.get("content");
+
+        if (id != null && !id.isEmpty()) resource.setId(id);
+        if (content != null && !content.isEmpty()) resource.setContent(content);
+
+        response.setStatus(HttpStatus.OK);
+        response.setResponseBody(resource);
+    }
+
+    private String generateETag(Resource resource) throws NoSuchAlgorithmException {
+
+        MessageDigest md = MessageDigest.getInstance("MD5");
+        byte[] hash = md.digest(resource.toString().getBytes(StandardCharsets.UTF_8));
+
+        // 바이트 배열을 16진수 문자열로 변환하여 ETag로 사용
+        StringBuilder hexString = new StringBuilder();
+        for (byte b : hash) {
+            String hex = Integer.toHexString(0xff & b);
+            if (hex.length() == 1) hexString.append('0');
+            hexString.append(hex);
+        }
+        return hexString.toString();
+    }
+
+    private static void checkIsEnableMethod(HttpRequest request, HttpMethod httpMethod) {
+        if (request.getMethod() != httpMethod) {
+            throw new NotImplementedException("잘못된 METHOD 입니다");
+        }
     }
 }
