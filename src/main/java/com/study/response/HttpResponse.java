@@ -1,5 +1,6 @@
 package com.study.response;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,7 +19,7 @@ public class HttpResponse {
     private final StringBuilder messageBuilder = new StringBuilder();
     private HttpStatus status;
     private String location;
-    private String responseBody;
+    private Object responseBody;
     private String contentType = "text/html; charset=UTF-8";
 
     private Map<String, String> headers = new HashMap<>();
@@ -28,10 +29,12 @@ public class HttpResponse {
     }
 
     public String getResponse() throws IOException {
-        if (this.responseBody != null && this.responseBody.endsWith(".html")) {
-            this.responseBody = findResourceFromLocation(responseBody);
-            headers.put("Content-Type", "text/html; charset=UTF-8");
-            headers.put("Content-Length", String.valueOf(responseBody.getBytes().length));
+        if (isHtmlResponseBody()) {
+            this.responseBody = findResourceFromLocation((String) responseBody);
+            updateHtmlHeaders();
+        } else {
+            this.responseBody = convertToJsonIfNecessary(responseBody);
+            updateJsonHeaders();
         }
 
         generateStatusLine();
@@ -44,6 +47,31 @@ public class HttpResponse {
 
         return messageBuilder.toString();
     }
+
+    private boolean isHtmlResponseBody() {
+        return this.responseBody instanceof String && ((String) this.responseBody).endsWith(".html");
+    }
+
+    private Object convertToJsonIfNecessary(Object responseBody) throws IOException {
+        if (!(responseBody instanceof String)) {
+            ObjectMapper objectMapper = new ObjectMapper();
+            return objectMapper.writeValueAsString(responseBody);
+        }
+        return responseBody;
+    }
+
+
+    private void updateHtmlHeaders() {
+        headers.put("Content-Type", "text/html; charset=UTF-8");
+        headers.put("Content-Length", String.valueOf(responseBody.toString().getBytes().length));
+    }
+
+
+    private void updateJsonHeaders() {
+        headers.put("Content-Type", "application/json; charset=UTF-8");
+        headers.put("Content-Length", String.valueOf(responseBody.toString().getBytes().length));
+    }
+
 
     // 헤더, 쿠키
     private void generateHeaderLine() {
@@ -80,7 +108,7 @@ public class HttpResponse {
         headers.put("Location", location);
     }
 
-    public void setResponseBody(String responseBody) {
+    public void setResponseBody(Object responseBody) {
         this.responseBody = responseBody;
     }
 

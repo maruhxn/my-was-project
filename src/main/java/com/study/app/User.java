@@ -1,9 +1,13 @@
 package com.study.app;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 public class User {
 
     private String id;
     private String name;
+
+    @JsonIgnore
     private String password;
 
     public User() {

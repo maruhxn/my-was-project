@@ -69,26 +69,27 @@ Web server와 WAS는 사용 목적이 다르다.
 
 ### 구현 내용
 
-- 클라이언트 요청 동시 처리
+- 클라이언트 요청 동시 처리 [OK]
+- 스레드 풀 관리
 - 요청 처리
-    - 요청 경로에 따른 적절한 Servlet 실행 by 애노테이션
+    - 요청 경로에 따른 적절한 Servlet 실행 by 애노테이션 [OK]
     - Content-Type은 다음 3가지 지원
-        - "application/x-www-form-urlencoded"
+        - "application/x-www-form-urlencoded" [OK]
         - "application/json"
         - "multipart/form-data"
-    - GET, POST 요청 처리 가능
-    - 다양한 헤더 정보 저장 가능
+    - GET, POST 요청 처리 가능 [OK]
+    - 다양한 헤더 정보 저장 가능 [OK]
     - 캐싱 기능 지원
 - 응답
-    - 200, 201, 302, 400, 401, 404, 500 지원
+    - 200, 201, 302, 400, 401, 404, 405, 500 지원 [OK]
     - Content-Type은 다음 3개 지원
-        - text/html
+        - text/html [OK]
         - application/json
-        - text/plain
-    - 쿠키 & 세션 지원
+        - text/plain [OK]
+    - 쿠키 & 세션 지원 [OK]
         - 세션 타임아웃
-    - 리다이렉트 지원
-- 리소스 관리
-- 스레드 풀 관리
+    - 리다이렉트 지원 [OK]
+
+json -> 쿠키 리팩토링 -> 세션 타임아웃(Max-Age로 구현하되, 요청시마다 세션이 있다면 값 갱신) -> 캐싱 -> 스레드풀
 
 이렇게 구현된 WAS를 사용하여 간단한 유저 관리 웹 서비스 구현

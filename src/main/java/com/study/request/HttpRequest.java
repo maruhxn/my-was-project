@@ -1,5 +1,6 @@
 package com.study.request;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.study.session.Session;
 import com.study.session.SessionManager;
 import org.slf4j.Logger;
@@ -24,6 +25,7 @@ public class HttpRequest {
     private final Map<String, String> parameters = new HashMap<>();
     private final Map<String, String> headers = new HashMap<>();
     private final Map<String, String> cookies = new HashMap<>();
+    private Map<String, Object> jsonBody;
 
     private final SessionManager sessionManager;
 
@@ -105,7 +107,14 @@ public class HttpRequest {
         String contentType = headers.get(CONTENT_TYPE_HEADER_KEY);
         if ("application/x-www-form-urlencoded".equals(contentType)) {
             parseQueryParameters(body);
+        } else if ("application/json".equals(contentType)) {
+            parseJsonBody(body);
         }
+    }
+
+    private void parseJsonBody(String body) throws IOException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        jsonBody = objectMapper.readValue(body, Map.class);
     }
 
     public HttpMethod getMethod() {
@@ -122,6 +131,10 @@ public class HttpRequest {
 
     public Map<String, String> getHeaders() {
         return headers;
+    }
+
+    public Map<String, Object> getJsonBody() {
+        return jsonBody;
     }
 
     public Map<String, String> getCookies() {
