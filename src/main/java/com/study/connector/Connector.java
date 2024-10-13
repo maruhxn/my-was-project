@@ -23,23 +23,40 @@ public class Connector {
 
     private static final Logger log = LoggerFactory.getLogger(Connector.class);
 
-    private final ExecutorService es = Executors.newFixedThreadPool(10);
+    private final ExecutorService es;
     private final int DEFAULT_PORT = 8080;
+    private final int DEFAULT_MAX_THREADS = 200;
     private final int DEFAULT_ACCEPT_COUNT = 100;
     private final ServerSocket serverSocket;
     private final ServletManager servletManager;
     private final SessionManager sessionManager;
 
-    public Connector(final int port, final int acceptCount, ServletManager servletManager, SessionManager sessionManager) {
+    public Connector(final int port, final int maxThreads, final int acceptCount, ServletManager servletManager, SessionManager sessionManager) {
         this.servletManager = servletManager;
         this.serverSocket = createServerSocket(port, acceptCount);
         this.sessionManager = sessionManager;
+        this.es = createExecutorService(maxThreads); // maxThreads에 따라 쓰레드 풀 크기 설정
+    }
+
+    private ExecutorService createExecutorService(int maxThreads) {
+        final int checkedMaxThreads = checkMaxThreads(maxThreads);
+        log.info("Set maxThreads={}", checkedMaxThreads);
+        return Executors.newFixedThreadPool(checkedMaxThreads);
+    }
+
+    private int checkMaxThreads(int maxThreads) {
+        if (maxThreads <= 0) {
+            return DEFAULT_MAX_THREADS;
+        }
+
+        return maxThreads;
     }
 
     private ServerSocket createServerSocket(int port, int acceptCount) {
         try {
             final int checkedPort = checkPort(port);
             final int checkedAcceptCount = checkAcceptCount(acceptCount);
+            log.info("Set acceptCount={}", checkedAcceptCount);
             return new ServerSocket(checkedPort, checkedAcceptCount);
         } catch (IOException e) {
             throw new UncheckedIOException(e);

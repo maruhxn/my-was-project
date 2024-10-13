@@ -13,7 +13,14 @@ import com.study.session.SessionManager;
 import java.util.List;
 
 public class MyWasMain {
+
+    private static int MAX_THREADS = -1;
+    private static int ACCEPT_COUNT = -1;
+    private static int PORT = -1;
+
     public static void main(String[] args) {
+        parseProgramArguments(args);
+
         Resource eTagResource = new Resource("v1", "v1");
         UserRepository userRepository = new MemoryUserRepository();
         List<Object> controllers = List.of(new UserController(userRepository, eTagResource));
@@ -25,7 +32,20 @@ public class MyWasMain {
 
         SessionManager sessionManager = new SessionManager();
 
-        Connector connector = new Connector(8080, 100, servletManager, sessionManager);
+        Connector connector = new Connector(PORT, MAX_THREADS, ACCEPT_COUNT, servletManager, sessionManager);
         connector.start();
+    }
+
+    private static void parseProgramArguments(String[] args) {
+        for (String arg : args) {
+            String[] parameterEntry = arg.split("=");
+            if (parameterEntry[0].equals("maxThreads")) {
+                MAX_THREADS = Integer.parseInt(parameterEntry[1]);
+            } else if (parameterEntry[0].equals("acceptCount")) {
+                ACCEPT_COUNT = Integer.parseInt(parameterEntry[1]);
+            } else if (parameterEntry[0].equals("port")) {
+                PORT = Integer.parseInt(parameterEntry[1]);
+            }
+        }
     }
 }
