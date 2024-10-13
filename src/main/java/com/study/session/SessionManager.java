@@ -15,12 +15,14 @@ public class SessionManager {
      * 세션 조회
      */
     public Session getSession(HttpRequest request, Boolean creation) {
-        String sessionId = request.getCookie(SESSION_COOKIE_NAME);
+        HttpCookie sessionCookie = request.getCookie(SESSION_COOKIE_NAME);
 
         // 세션 ID가 없으면 새로운 세션을 생성
-        if (sessionId == null) {
+        if (sessionCookie == null) {
             return creation ? createNewSession() : null;
         }
+
+        String sessionId = sessionCookie.getRawValue();
 
         // 세션 저장소에서 세션을 가져옴
         Session session = sessionStore.get(sessionId);

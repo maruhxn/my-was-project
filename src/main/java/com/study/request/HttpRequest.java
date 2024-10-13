@@ -1,6 +1,7 @@
 package com.study.request;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.study.session.HttpCookie;
 import com.study.session.Session;
 import com.study.session.SessionManager;
 import org.slf4j.Logger;
@@ -24,7 +25,7 @@ public class HttpRequest {
     private String requestURI;
     private final Map<String, String> parameters = new HashMap<>();
     private final Map<String, String> headers = new HashMap<>();
-    private final Map<String, String> cookies = new HashMap<>();
+    private final Map<String, HttpCookie> cookies = new HashMap<>();
     private Map<String, Object> jsonBody;
 
     private final SessionManager sessionManager;
@@ -78,11 +79,14 @@ public class HttpRequest {
 
     private void parseCookies(String cookieHeader) {
         String[] cookiePairs = cookieHeader.split(";");
-        for (String cookie : cookiePairs) {
-            String[] keyValue = cookie.split("=", 2); // 쿠키는 'name=value' 형태로 전달됨
+        for (String cookieString : cookiePairs) {
+            String[] keyValue = cookieString.split("=", 2); // 쿠키는 'name=value' 형태로 전달됨
             String key = keyValue[0].trim();
             String value = keyValue.length > 1 ? keyValue[1].trim() : ""; // value가 없는 경우 빈 문자열로 처리
-            cookies.put(key, value);
+
+            // 쿠키 파싱 필요
+            HttpCookie cookie = new HttpCookie(key, value);
+            cookies.put(key, cookie);
         }
     }
 
@@ -137,12 +141,12 @@ public class HttpRequest {
         return jsonBody;
     }
 
-    public Map<String, String> getCookies() {
+    public Map<String, HttpCookie> getCookies() {
         return cookies;
     }
 
-    public String getCookie(String key) {
-        return cookies.get(key);
+    public HttpCookie getCookie(String name) {
+        return cookies.get(name);
     }
 
     @Override

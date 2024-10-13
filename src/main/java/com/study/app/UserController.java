@@ -9,6 +9,7 @@ import com.study.request.HttpRequest;
 import com.study.response.HttpResponse;
 import com.study.response.HttpStatus;
 import com.study.servlet.annotation.RequestMapping;
+import com.study.session.HttpCookie;
 import com.study.session.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -74,7 +75,8 @@ public class UserController {
 
         response.setStatus(HttpStatus.FOUND);
         response.setLocation("/");
-        response.addCookie(SESSION_COOKIE_NAME, session.getId());
+        HttpCookie cookie = new HttpCookie(SESSION_COOKIE_NAME, session.getId());
+        response.addCookie(cookie);
     }
 
     @RequestMapping("/login-action")
@@ -107,7 +109,8 @@ public class UserController {
 
         response.setStatus(HttpStatus.FOUND);
         response.setLocation("/");
-        response.addCookie(SESSION_COOKIE_NAME, session.getId());
+        HttpCookie cookie = new HttpCookie(SESSION_COOKIE_NAME, session.getId());
+        response.addCookie(cookie);
     }
 
     @RequestMapping("/register")
@@ -200,12 +203,19 @@ public class UserController {
         }
 
         Session session = request.getSession(false);
-        if (session != null) {
-            session.invalidate();
+
+        if (session == null) {
+            throw new UnauthorizedException("로그인이 필요합니다.");
         }
 
+        session.invalidate();
         response.setStatus(HttpStatus.FOUND);
         response.setLocation("/");
-        response.addCookie(SESSION_COOKIE_NAME, "; Path=/; Max-Age=0; HttpOnly");
+        HttpCookie cookie = new HttpCookie(SESSION_COOKIE_NAME, null);
+        cookie.setMaxAge(0);
+        cookie.setHttpOnly(true);
+        cookie.setPath("/");
+
+        response.addCookie(cookie);
     }
 }

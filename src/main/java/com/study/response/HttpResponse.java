@@ -1,6 +1,7 @@
 package com.study.response;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.study.session.HttpCookie;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,29 +24,35 @@ public class HttpResponse {
     private String contentType = "text/html; charset=UTF-8";
 
     private Map<String, String> headers = new HashMap<>();
-    private Map<String, String> cookies = new HashMap<>();
+    private Map<String, HttpCookie> cookies = new HashMap<>();
 
     public HttpResponse() {
     }
 
     public String getResponse() throws IOException {
-        if (isHtmlResponseBody()) {
-            this.responseBody = findResourceFromLocation((String) responseBody);
-            updateHtmlHeaders();
-        } else {
-            this.responseBody = convertToJsonIfNecessary(responseBody);
-            updateJsonHeaders();
+        if (responseBody != null) {
+            if (isHtmlResponseBody()) {
+                this.responseBody = findResourceFromLocation((String) responseBody);
+                updateHtmlHeaders();
+            } else {
+                this.responseBody = convertToJsonIfNecessary(responseBody);
+                updateJsonHeaders();
+            }
         }
 
         generateStatusLine();
         generateHeaderLine(); // 헤더, 쿠키 처리
+        appendMessageBody();
+
+        return messageBuilder.toString();
+    }
+
+    private void appendMessageBody() {
         messageBuilder.append(System.lineSeparator());
 
         if (responseBody != null) {
             messageBuilder.append(responseBody);
         }
-
-        return messageBuilder.toString();
     }
 
     private boolean isHtmlResponseBody() {
@@ -80,8 +87,9 @@ public class HttpResponse {
         }
 
         // 쿠키 추가
-        for (Map.Entry<String, String> cookie : cookies.entrySet()) {
-            messageBuilder.append(String.format("Set-Cookie: %s=%s\r\n", cookie.getKey(), cookie.getValue()));
+        for (Map.Entry<String, HttpCookie> cookieEntry : cookies.entrySet()) {
+            HttpCookie cookie = cookieEntry.getValue();
+            messageBuilder.append(String.format("Set-Cookie: %s=%s\r\n", cookie.getName(), cookie.getValue()));
         }
     }
 
@@ -120,7 +128,7 @@ public class HttpResponse {
         headers.put("Content-Length", String.valueOf(length));
     }
 
-    public void addCookie(String key, String value) {
-        cookies.put(key, value);
+    public void addCookie(HttpCookie cookie) {
+        cookies.put(cookie.getName(), cookie);
     }
 }
